@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Interview Prep — Master Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #222733;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --accent4: #10b981;
+    --accent5: #ef4444;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-mid: #94a3b8;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --purple: #7c3aed;
+    --cyan: #00e5ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    padding: 32px 40px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,12,16,0.95);
+    backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  }
+  .header-title { display: flex; align-items: center; gap: 14px; }
+  .header-badge {
+    background: linear-gradient(135deg, var(--accent2), var(--cyan));
+    padding: 6px 14px; border-radius: 6px;
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: #fff; font-weight: 700;
+  }
+  .header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--cyan); }
+  .stats-bar { display: flex; gap: 20px; align-items: center; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 20px; font-weight: 800; color: var(--cyan); font-family: 'Space Mono', monospace; }
+  .stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Search + Filters */
+  .controls {
+    padding: 20px 40px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 81px; z-index: 99;
+    background: rgba(10,12,16,0.97);
+  }
+  .search-box {
+    flex: 1; min-width: 220px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px;
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: var(--cyan); }
+  .filter-btn {
+    padding: 9px 18px; border-radius: 8px; cursor: pointer;
+    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-mid);
+    transition: all 0.2s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--cyan); color: #000; border-color: var(--cyan);
+  }
+  .filter-btn[data-cat="Spring Boot"].active { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .filter-btn[data-cat="DSA"].active { background: var(--yellow); color: #000; border-color: var(--yellow); }
+  .filter-btn[data-cat="Database"].active { background: var(--green); color: #000; border-color: var(--green); }
+  .filter-btn[data-cat="System Design"].active { background: var(--red); color: #fff; border-color: var(--red); }
+  .filter-btn[data-cat="Kafka"].active { background: #f97316; color: #000; border-color: #f97316; }
+  .filter-btn[data-cat="Microservices"].active { background: #ec4899; color: #fff; border-color: #ec4899; }
+
+  /* Layout */
+  .main { padding: 32px 40px; display: flex; gap: 28px; }
+  .sidebar {
+    width: 260px; flex-shrink: 0;
+    position: sticky; top: 145px; height: fit-content;
+  }
+  .content { flex: 1; }
+
+  /* Sidebar TOC */
+  .toc-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--text-dim); margin-bottom: 12px; font-weight: 700;
+  }
+  .toc-list { list-style: none; }
+  .toc-item {
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; color: var(--text-mid); transition: all 0.15s;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 2px;
+    border-left: 2px solid transparent;
+  }
+  .toc-item:hover { background: var(--surface2); color: var(--text); border-left-color: var(--cyan); }
+  .toc-item.active { background: var(--surface2); color: var(--cyan); border-left-color: var(--cyan); font-weight: 700; }
+  .toc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section-header {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .section-icon { font-size: 20px; }
+  .section-title { font-size: 18px; font-weight: 800; }
+  .section-count {
+    margin-left: auto; font-family: 'Space Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+    background: var(--surface2); padding: 4px 10px; border-radius: 20px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 12px;
+    overflow: hidden; transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #333a48; }
+  .card-header {
+    padding: 16px 20px; cursor: pointer;
+    display: flex; align-items: flex-start; gap: 14px;
+    transition: background 0.15s;
+  }
+  .card-header:hover { background: var(--surface2); }
+  .card-num {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--text-dim); flex-shrink: 0; padding-top: 2px;
+    min-width: 28px;
+  }
+  .card-q { font-size: 14px; font-weight: 600; flex: 1; line-height: 1.5; }
+  .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 700;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .tag-java { background: rgba(0,229,255,0.12); color: var(--cyan); }
+  .tag-spring { background: rgba(124,58,237,0.15); color: #a78bfa; }
+  .tag-dsa { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .tag-db { background: rgba(16,185,129,0.15); color: var(--green); }
+  .tag-kafka { background: rgba(249,115,22,0.15); color: #fb923c; }
+  .tag-system { background: rgba(239,68,68,0.15); color: #f87171; }
+  .tag-micro { background: rgba(236,72,153,0.15); color: #f472b6; }
+  .tag-perf { background: rgba(99,102,241,0.15); color: #818cf8; }
+
+  .chevron {
+    flex-shrink: 0; color: var(--text-dim); transition: transform 0.25s;
+    font-size: 14px; padding-top: 1px;
+  }
+  .card.open .chevron { transform: rotate(180deg); }
+
+  .card-body {
+    display: none; padding: 0 20px 20px 62px;
+    border-top: 1px solid var(--border);
+  }
+  .card.open .card-body { display: block; }
+
+  /* Answer styles */
+  .answer-block { padding-top: 16px; }
+  .answer-block p { font-size: 13.5px; color: var(--text-mid); line-height: 1.75; margin-bottom: 12px; }
+  .answer-block strong { color: var(--text); }
+  .answer-block ul, .answer-block ol { margin: 8px 0 12px 0; padding-left: 20px; }
+  .answer-block li { font-size: 13px; color: var(--text-mid); line-height: 1.7; margin-bottom: 4px; }
+  .answer-block li strong { color: var(--text); }
+
+  .code-block {
+    background: #0d1117; border: 1px solid #21262d;
+    border-radius: 8px; padding: 14px 16px; margin: 10px 0;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: #e6edf3; overflow-x: auto; line-height: 1.6;
+    white-space: pre;
+  }
+  .kw { color: #ff7b72; }
+  .cm { color: #8b949e; font-style: italic; }
+  .str { color: #a5d6ff; }
+  .fn { color: #d2a8ff; }
+  .nm { color: #79c0ff; }
+  .op { color: #ff7b72; }
+
+  .tip-box {
+    background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+    font-size: 13px; color: var(--text-mid); line-height: 1.65;
+  }
+  .tip-box .tip-label { color: var(--cyan); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+
+  .warn-box {
+    background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+    font-size: 13px; color: var(--text-mid);
+  }
+  .warn-box .warn-label { color: var(--yellow); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+
+  .complexity-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+  .complexity-table th { background: var(--surface2); color: var(--text); padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .complexity-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); color: var(--text-mid); }
+  .complexity-table tr:last-child td { border-bottom: none; }
+  .o1 { color: var(--green); font-family: 'Space Mono', monospace; font-weight: 700; }
+  .on { color: var(--yellow); font-family: 'Space Mono', monospace; font-weight: 700; }
+  .ologn { color: #60a5fa; font-family: 'Space Mono', monospace; font-weight: 700; }
+
+  /* Progress bar */
+  .progress-section { margin-bottom: 24px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+  .progress-bar { height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+
+  .no-results {
+    text-align: center; padding: 60px 20px; color: var(--text-dim);
+    font-size: 15px;
+  }
+  .no-results span { font-size: 36px; display: block; margin-bottom: 12px; }
+
+  /* Checkbox / Read state */
+  .check-btn {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    margin-left: 10px;
+    font-size: 13px;
+    color: transparent;
+    z-index: 10;
+  }
+  .check-btn:hover { border-color: var(--green); background: rgba(16,185,129,0.1); }
+  .check-btn.done {
+    background: var(--green); border-color: var(--green);
+    color: #000;
+  }
+  .card.read .card-header { opacity: 0.55; }
+  .card.read .card-q { text-decoration: line-through; text-decoration-color: var(--text-dim); }
+  .card.read { border-color: rgba(16,185,129,0.3); }
+  .card.read .card-header { background: rgba(16,185,129,0.04); }
+
+  /* Overall progress */
+  .overall-progress {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+  }
+  .prog-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .prog-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); font-weight: 700; }
+  .prog-count { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--green); }
+  .prog-track { height: 6px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--cyan)); border-radius: 6px; transition: width 0.4s ease; }
+
+  /* Section progress mini */
+  .sec-prog { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--green); margin-left: 8px; }
+
+  /* Read filter btn */
+  .filter-btn[data-cat="Unread"].active { background: #334155; color: var(--text); border-color: #475569; }
+  .filter-btn[data-cat="Read"].active { background: var(--green); color: #000; border-color: var(--green); }
+
+  @media (max-width: 900px) {
+    .main { flex-direction: column; padding: 20px; }
+    .sidebar { width: 100%; position: static; }
+    .controls { padding: 16px 20px; }
+    .header { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <div class="header-badge">6 YoE+</div>
+    <h1>Java Interview <span>Prep</span> Dashboard</h1>
+  </div>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-num" id="total-q">150+</div><div class="stat-label">Questions</div></div>
+    <div class="stat"><div class="stat-num" id="read-count" style="color:var(--green)">0</div><div class="stat-label">Read</div></div>
+    <div class="stat"><div class="stat-num" id="unread-count" style="color:var(--yellow)">0</div><div class="stat-label">Remaining</div></div>
+  </div>
+</div>
+
+<div class="controls">
+  <input class="search-box" id="search" placeholder="🔍  Search questions..." oninput="filterCards()">
+  <button class="filter-btn active" data-cat="All" onclick="setFilter('All', this)">All</button>
+  <button class="filter-btn" data-cat="Core Java" onclick="setFilter('Core Java', this)">Core Java</button>
+  <button class="filter-btn" data-cat="DSA" onclick="setFilter('DSA', this)">DSA</button>
+  <button class="filter-btn" data-cat="Spring Boot" onclick="setFilter('Spring Boot', this)">Spring Boot</button>
+  <button class="filter-btn" data-cat="Database" onclick="setFilter('Database', this)">Database</button>
+  <button class="filter-btn" data-cat="Kafka" onclick="setFilter('Kafka', this)">Kafka</button>
+  <button class="filter-btn" data-cat="Microservices" onclick="setFilter('Microservices', this)">Microservices</button>
+  <button class="filter-btn" data-cat="System Design" onclick="setFilter('System Design', this)">System Design</button>
+  <button class="filter-btn" data-cat="Read" onclick="setFilter('Read', this)">✅ Read</button>
+  <button class="filter-btn" data-cat="Unread" onclick="setFilter('Unread', this)">⬜ Unread</button>
+</div>
+
+<div class="main">
+  <nav class="sidebar">
+    <div class="toc-title">Sections</div>
+    <ul class="toc-list" id="toc"></ul>
+    <div style="margin-top:28px">
+      <div class="toc-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid)"><span style="background:var(--cyan);width:8px;height:8px;border-radius:50%;display:inline-block"></span>Core Java</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid)"><span style="background:var(--purple);width:8px;height:8px;border-radius:50%;display:inline-block"></span>Spring Boot</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid)"><span style="background:var(--yellow);width:8px;height:8px;border-radius:50%;display:inline-block"></span>DSA</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid)"><span style="background:var(--green);width:8px;height:8px;border-radius:50%;display:inline-block"></span>Database</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid)"><span style="background:#f97316;width:8px;height:8px;border-radius:50%;display:inline-block"></span>Kafka</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid)"><span style="background:#ec4899;width:8px;height:8px;border-radius:50%;display:inline-block"></span>Microservices</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="content" id="content">
+    <div class="overall-progress">
+      <div class="prog-top">
+        <span class="prog-title">Overall Progress</span>
+        <span class="prog-count" id="prog-label">0 / 0 read</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const sections = [
+  {
+    id: "core-java",
+    title: "Core Java & Internals",
+    icon: "☕",
+    color: "#00e5ff",
+    cat: "Core Java",
+    questions: [
+      {
+        q: "How does HashMap work internally? What happens during a collision?",
+        tags: ["java","java"],
+        answer: `<p><strong>Bucket index calculation:</strong> <code>key.hashCode()</code> → spread via XOR of upper/lower bits → <code>index = hash & (n-1)</code>. The spread prevents clustering by distributing bits evenly.</p>
+<div class="code-block"><span class="cm">// Simplified internal hash spread (Java 8)</span>
+<span class="kw">static final int</span> <span class="fn">hash</span>(Object key) {
+    <span class="kw">int</span> h;
+    <span class="kw">return</span> (key == <span class="kw">null</span>) ? <span class="nm">0</span> : (h = key.<span class="fn">hashCode</span>()) ^ (h >>> <span class="nm">16</span>);
+}</div>
+<p><strong>Collision handling:</strong></p>
+<ul>
+  <li>Java 7: Linked list chaining — O(n) worst case</li>
+  <li>Java 8+: Once a bucket exceeds <strong>8 entries</strong>, it converts to a <strong>Red-Black Tree</strong> — O(log n)</li>
+  <li>Why 8? Poisson distribution — at load factor 0.75, probability of 8+ entries in one bucket is near zero (~0.00000006)</li>
+</ul>
+<p><strong>Resize behavior:</strong> When <code>size > capacity × 0.75</code>, the array doubles and ALL entries are rehashed. Set initial capacity if you know the expected size.</p>
+<div class="tip-box"><div class="tip-label">⚡ Killer Answer</div>HashMap is not thread-safe. ConcurrentHashMap uses CAS + synchronized on individual nodes (Java 8) — never locks the entire map.</div>
+<div class="warn-box"><div class="warn-label">⚠ Common Bug</div>Overriding equals() without overriding hashCode() causes objects to "disappear" from the map silently.</div>`
+      },
+      {
+        q: "Fail-Fast vs Fail-Safe iterators — what's the difference?",
+        tags: ["java"],
+        answer: `<p><strong>Fail-Fast</strong> iterators (e.g., <code>ArrayList</code>, <code>HashMap</code>) throw <code>ConcurrentModificationException</code> if the collection is modified during iteration. They check a <code>modCount</code> field.</p>
+<p><strong>Fail-Safe</strong> iterators (e.g., <code>CopyOnWriteArrayList</code>, <code>ConcurrentHashMap</code>) iterate over a snapshot copy — no exception, but may not reflect latest changes.</p>
+<table class="complexity-table">
+  <tr><th>Feature</th><th>Fail-Fast</th><th>Fail-Safe</th></tr>
+  <tr><td>Exception on modify</td><td>✅ ConcurrentModificationException</td><td>❌ No exception</td></tr>
+  <tr><td>Works on</td><td>Original collection</td><td>Cloned snapshot</td></tr>
+  <tr><td>Memory overhead</td><td>Low</td><td>Higher</td></tr>
+  <tr><td>Examples</td><td>ArrayList, HashMap</td><td>CopyOnWriteArrayList, ConcurrentHashMap</td></tr>
+</table>`
+      },
+      {
+        q: "Why is String immutable in Java?",
+        tags: ["java"],
+        answer: `<ul>
+  <li><strong>String Pool:</strong> Multiple references can safely point to the same object. Mutability would corrupt other references.</li>
+  <li><strong>Security:</strong> Class names, network connections, file paths — all Strings. Mutation would be a security hole.</li>
+  <li><strong>Thread Safety:</strong> Immutable objects are inherently thread-safe — no synchronization needed.</li>
+  <li><strong>Hash caching:</strong> hashCode is cached after first computation — used heavily in HashMap keys.</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Follow-up</div>StringBuilder vs StringBuffer: both mutable. StringBuffer is synchronized (thread-safe, slower). StringBuilder is not synchronized (faster, single-thread use).</div>`
+      },
+      {
+        q: "How does ConcurrentHashMap work internally?",
+        tags: ["java"],
+        answer: `<p><strong>Java 7:</strong> Divided into segments (default 16). Each segment is a separate lock — 16 threads can write concurrently.</p>
+<p><strong>Java 8+:</strong> Eliminated segments entirely. Uses <strong>CAS (Compare-And-Swap)</strong> for lock-free reads and inserts. Synchronizes only on the <em>individual bucket head node</em> for writes — much finer granularity.</p>
+<ul>
+  <li>Reads are lock-free — always consistent</li>
+  <li>Writes use CAS optimistically; fall back to synchronized on conflict</li>
+  <li>Does NOT allow null keys or null values (unlike HashMap) — ambiguity in concurrent context</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Key Insight</div>It NEVER locks the entire map. This is the fundamental difference from <code>Collections.synchronizedMap()</code>.</div>`
+      },
+      {
+        q: "Explain the Java Memory Model — Heap, Stack, GC cycles.",
+        tags: ["java","perf"],
+        answer: `<ul>
+  <li><strong>Stack:</strong> Per-thread. Holds method frames, local variables, references. LIFO. Fast allocation.</li>
+  <li><strong>Heap:</strong> Shared across threads. All objects live here. GC manages it.</li>
+  <li><strong>Heap Structure:</strong> Young Gen (Eden + S0 + S1) → Old Gen → Metaspace</li>
+</ul>
+<p><strong>GC Cycle:</strong> Minor GC collects Young Gen (frequent, fast). Major/Full GC collects Old Gen (rare, expensive — stop-the-world).</p>
+<p><strong>GC Algorithms:</strong> G1 (default Java 9+), ZGC (low-latency, Java 15+), Shenandoah, CMS (deprecated).</p>
+<div class="warn-box"><div class="warn-label">Memory Leak Causes</div>Static collections holding references, unclosed streams/connections, ThreadLocal not removed, inner class holding outer reference, listeners not deregistered.</div>`
+      },
+      {
+        q: "volatile vs synchronized — when to use which?",
+        tags: ["java"],
+        answer: `<p><strong>volatile:</strong> Guarantees <em>visibility</em> — every read sees the latest write. Does NOT guarantee atomicity.</p>
+<div class="code-block"><span class="kw">volatile boolean</span> running = <span class="kw">true</span>; <span class="cm">// safe for flag variables</span>
+<span class="cm">// NOT safe: running++ is not atomic!</span></div>
+<p><strong>synchronized:</strong> Guarantees both visibility AND atomicity. Uses monitor locks. More expensive.</p>
+<ul>
+  <li>Use <code>volatile</code>: simple flags, status variables, one writer many readers</li>
+  <li>Use <code>synchronized</code>: compound operations (check-then-act), multiple field updates</li>
+  <li>Use <code>AtomicInteger</code> etc. for counters — CAS-based, no full lock</li>
+</ul>`
+      },
+      {
+        q: "CompletableFuture vs ExecutorService — what's the difference?",
+        tags: ["java"],
+        answer: `<p><strong>ExecutorService</strong> manages a pool of threads and submits tasks returning <code>Future</code>. <code>future.get()</code> blocks the calling thread.</p>
+<p><strong>CompletableFuture</strong> (Java 8+) is non-blocking and composable — chain async operations with <code>thenApply</code>, <code>thenCompose</code>, <code>exceptionally</code>, etc.</p>
+<div class="code-block"><span class="cm">// CompletableFuture chaining</span>
+CompletableFuture.<span class="fn">supplyAsync</span>(() -> <span class="fn">fetchUser</span>(id))
+    .<span class="fn">thenApply</span>(user -> <span class="fn">enrichProfile</span>(user))
+    .<span class="fn">thenAccept</span>(System.out::println)
+    .<span class="fn">exceptionally</span>(ex -> { log(ex); <span class="kw">return null</span>; });</div>
+<div class="tip-box"><div class="tip-label">Production tip</div>Always supply a custom executor to CompletableFuture — the default ForkJoinPool.commonPool() is shared and can be starved by blocking calls.</div>`
+      },
+      {
+        q: "Runnable vs Callable — key differences?",
+        tags: ["java"],
+        answer: `<table class="complexity-table">
+  <tr><th></th><th>Runnable</th><th>Callable&lt;V&gt;</th></tr>
+  <tr><td>Return value</td><td>void</td><td>Returns V</td></tr>
+  <tr><td>Exception</td><td>Cannot throw checked</td><td>Can throw checked</td></tr>
+  <tr><td>Method</td><td>run()</td><td>call()</td></tr>
+  <tr><td>Used with</td><td>Thread, ExecutorService</td><td>ExecutorService → Future&lt;V&gt;</td></tr>
+</table>
+<p>Use <strong>Callable</strong> when you need a result or exception propagation from your async task.</p>`
+      },
+      {
+        q: "Java 8 key features — what really matters at senior level?",
+        tags: ["java"],
+        answer: `<ul>
+  <li><strong>Lambda + Functional Interfaces:</strong> Enable passing behavior as data. <code>@FunctionalInterface</code> = exactly one abstract method.</li>
+  <li><strong>Streams API:</strong> Lazy evaluation, pipelined operations, parallel streams. Intermediate ops (map/filter/flatMap) vs terminal ops (collect/forEach/reduce).</li>
+  <li><strong>Optional:</strong> Explicit null handling — avoids NPE, makes nullable return explicit in API contract.</li>
+  <li><strong>Default/Static interface methods:</strong> Backward-compatible evolution of interfaces.</li>
+  <li><strong>CompletableFuture:</strong> Non-blocking async composition.</li>
+  <li><strong>New Date/Time API:</strong> <code>LocalDate</code>, <code>ZonedDateTime</code> — immutable, thread-safe, replaces Calendar.</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Java 11+</div>Java 11: String methods (isBlank, strip, lines), var in lambdas, HttpClient. Java 17: Sealed classes, records, pattern matching for instanceof, text blocks.</div>`
+      },
+      {
+        q: "What is a deadlock? How do you prevent it?",
+        tags: ["java"],
+        answer: `<p>Deadlock: Thread A holds lock X, waits for lock Y. Thread B holds lock Y, waits for lock X. Both block forever.</p>
+<p><strong>Prevention strategies:</strong></p>
+<ul>
+  <li><strong>Lock ordering:</strong> Always acquire locks in the same fixed order across all threads</li>
+  <li><strong>tryLock with timeout:</strong> <code>lock.tryLock(500, TimeUnit.MILLISECONDS)</code> — back off if can't acquire</li>
+  <li><strong>Lock-free data structures:</strong> ConcurrentHashMap, AtomicReference</li>
+  <li><strong>Minimize lock scope:</strong> Hold locks for the shortest time possible</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Detection</div>Use thread dump analysis (<code>jstack &lt;pid&gt;</code>) — JVM marks deadlocked threads and shows the cycle.</div>`
+      }
+    ]
+  },
+  {
+    id: "dsa",
+    title: "DSA & Coding Problems",
+    icon: "🧮",
+    color: "#f59e0b",
+    cat: "DSA",
+    questions: [
+      {
+        q: "Find 2nd highest salary — Stream API + SQL",
+        tags: ["dsa","db"],
+        answer: `<div class="code-block"><span class="cm">// Java Streams</span>
+employees.stream()
+    .<span class="fn">map</span>(Employee::getSalary)
+    .<span class="fn">distinct</span>()
+    .<span class="fn">sorted</span>(Comparator.<span class="fn">reverseOrder</span>())
+    .<span class="fn">skip</span>(<span class="nm">1</span>)
+    .<span class="fn">findFirst</span>()
+    .<span class="fn">orElseThrow</span>();</div>
+<div class="code-block"><span class="cm">-- SQL (portable)</span>
+<span class="kw">SELECT</span> <span class="fn">MAX</span>(salary)
+<span class="kw">FROM</span> employees
+<span class="kw">WHERE</span> salary &lt; (<span class="kw">SELECT MAX</span>(salary) <span class="kw">FROM</span> employees);
+
+<span class="cm">-- Nth highest (dense_rank)</span>
+<span class="kw">SELECT</span> salary <span class="kw">FROM</span> (
+  <span class="kw">SELECT</span> salary, <span class="fn">DENSE_RANK</span>() <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> salary <span class="kw">DESC</span>) rk
+  <span class="kw">FROM</span> employees
+) t <span class="kw">WHERE</span> rk = <span class="nm">2</span>;</div>`
+      },
+      {
+        q: "Top-K frequent words — sorted by frequency then lexicographically",
+        tags: ["dsa"],
+        answer: `<div class="code-block">Map&lt;String, Long&gt; freq = Arrays.<span class="fn">stream</span>(words)
+    .<span class="fn">collect</span>(Collectors.<span class="fn">groupingBy</span>(
+        Function.identity(), Collectors.<span class="fn">counting</span>()));
+
+freq.entrySet().stream()
+    .<span class="fn">sorted</span>(Map.Entry.&lt;String, Long&gt;<span class="fn">comparingByValue</span>(Comparator.<span class="fn">reverseOrder</span>())
+        .<span class="fn">thenComparing</span>(Map.Entry.<span class="fn">comparingByKey</span>()))
+    .<span class="fn">limit</span>(k)
+    .<span class="fn">map</span>(Map.Entry::getKey)
+    .<span class="fn">collect</span>(Collectors.<span class="fn">toList</span>());</div>`
+      },
+      {
+        q: "Reverse linked list in pairs (1→2→3→4→5 becomes 2→1→4→3→5)",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="kw">public</span> ListNode <span class="fn">swapPairs</span>(ListNode head) {
+    <span class="kw">if</span> (head == <span class="kw">null</span> || head.next == <span class="kw">null</span>) <span class="kw">return</span> head;
+    ListNode second = head.next;
+    head.next = <span class="fn">swapPairs</span>(second.next); <span class="cm">// recurse on rest</span>
+    second.next = head;
+    <span class="kw">return</span> second;
+}</div>
+<p>Time: O(n), Space: O(n) recursive stack. Iterative variant uses O(1) space with prev/curr/next pointers.</p>`
+      },
+      {
+        q: "Group anagrams from a list of strings",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="cm">// Sort each word as key — O(n·k·logk)</span>
+Map&lt;String, List&lt;String&gt;&gt; map = <span class="kw">new</span> HashMap&lt;&gt;();
+<span class="kw">for</span> (String s : strs) {
+    <span class="kw">char</span>[] ch = s.<span class="fn">toCharArray</span>();
+    Arrays.<span class="fn">sort</span>(ch);
+    map.<span class="fn">computeIfAbsent</span>(<span class="kw">new</span> <span class="fn">String</span>(ch), k -> <span class="kw">new</span> ArrayList&lt;&gt;()).<span class="fn">add</span>(s);
+}
+<span class="kw">return new</span> ArrayList&lt;&gt;(map.<span class="fn">values</span>());</div>
+<p>Alternative O(n·k) approach: use frequency array of 26 chars as key instead of sorting.</p>`
+      },
+      {
+        q: "Find first non-repeated character in a String",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="cm">// Streams approach</span>
+s.<span class="fn">chars</span>()
+ .<span class="fn">mapToObj</span>(c -> (<span class="kw">char</span>) c)
+ .<span class="fn">collect</span>(Collectors.<span class="fn">groupingBy</span>(Function.identity(), LinkedHashMap::<span class="kw">new</span>, Collectors.<span class="fn">counting</span>()))
+ .entrySet().stream()
+ .<span class="fn">filter</span>(e -> e.<span class="fn">getValue</span>() == <span class="nm">1</span>)
+ .<span class="fn">findFirst</span>()
+ .<span class="fn">map</span>(Map.Entry::getKey)
+ .<span class="fn">orElse</span>(<span class="kw">null</span>);</div>
+<p><code>LinkedHashMap::new</code> preserves insertion order — critical for correctness.</p>`
+      },
+      {
+        q: "Move all zeroes to end of array (in-place)",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="kw">int</span> pos = <span class="nm">0</span>;
+<span class="kw">for</span> (<span class="kw">int</span> n : nums) <span class="kw">if</span> (n != <span class="nm">0</span>) nums[pos++] = n;
+<span class="kw">while</span> (pos &lt; nums.length) nums[pos++] = <span class="nm">0</span>;</div>
+<p>Two-pointer, O(n) time, O(1) space. Maintains relative order of non-zero elements.</p>`
+      },
+      {
+        q: "LRU Cache implementation",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="kw">class</span> <span class="nm">LRUCache</span> <span class="kw">extends</span> LinkedHashMap&lt;Integer, Integer&gt; {
+    <span class="kw">private final int</span> cap;
+    <span class="nm">LRUCache</span>(<span class="kw">int</span> cap) {
+        <span class="kw">super</span>(cap, <span class="nm">0.75f</span>, <span class="kw">true</span>); <span class="cm">// accessOrder=true</span>
+        <span class="kw">this</span>.cap = cap;
+    }
+    <span class="kw">protected boolean</span> <span class="fn">removeEldestEntry</span>(Map.Entry e) {
+        <span class="kw">return</span> size() > cap;
+    }
+}</div>
+<p>For custom implementation: <code>HashMap&lt;key, DLL node&gt;</code> + doubly linked list. O(1) get and put. Most recently used goes to head; evict from tail.</p>`
+      },
+      {
+        q: "Two Sum — optimal HashMap solution",
+        tags: ["dsa"],
+        answer: `<div class="code-block">Map&lt;Integer, Integer&gt; seen = <span class="kw">new</span> HashMap&lt;&gt;();
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="nm">0</span>; i &lt; nums.length; i++) {
+    <span class="kw">int</span> complement = target - nums[i];
+    <span class="kw">if</span> (seen.<span class="fn">containsKey</span>(complement))
+        <span class="kw">return new int</span>[]{seen.<span class="fn">get</span>(complement), i};
+    seen.<span class="fn">put</span>(nums[i], i);
+}</div>
+<p>O(n) time, O(n) space. One pass.</p>`
+      }
+    ]
+  },
+  {
+    id: "spring",
+    title: "Spring Boot & Internals",
+    icon: "🍃",
+    color: "#7c3aed",
+    cat: "Spring Boot",
+    questions: [
+      {
+        q: "How does Spring Boot auto-configuration work internally?",
+        tags: ["spring"],
+        answer: `<p><code>@SpringBootApplication</code> = <code>@Configuration</code> + <code>@EnableAutoConfiguration</code> + <code>@ComponentScan</code>.</p>
+<p>Auto-configuration: Spring Boot reads <code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code> (or legacy <code>spring.factories</code>). Each listed class is a <code>@Configuration</code> guarded by <code>@ConditionalOn*</code> annotations — only activates when conditions are met (e.g., class on classpath, property set, bean missing).</p>
+<div class="tip-box"><div class="tip-label">Startup lifecycle</div>1. SpringApplication.run() → 2. Create ApplicationContext → 3. Load beans + auto-configs → 4. Refresh context → 5. CommandLineRunner / ApplicationRunner callbacks</div>`
+      },
+      {
+        q: "@Component vs @Service vs @Repository — internals and differences",
+        tags: ["spring"],
+        answer: `<p>All three are stereotypes of <code>@Component</code> — functionally equivalent for component scanning. The semantic differences are:</p>
+<ul>
+  <li><strong>@Repository:</strong> Enables Spring's persistence exception translation — converts JPA/JDBC exceptions into Spring's DataAccessException hierarchy.</li>
+  <li><strong>@Service:</strong> Marks business logic layer. No extra behavior but clarifies intent and is expected in AOP pointcut expressions.</li>
+  <li><strong>@Component:</strong> Generic. Use when none of the above apply.</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Key Insight</div>@Repository is the only one with real additional runtime behavior (exception translation proxy). The others are purely semantic.</div>`
+      },
+      {
+        q: "@Transactional internals and pitfalls",
+        tags: ["spring","db"],
+        answer: `<p>Spring wraps the bean in a proxy. On method call, the proxy starts/joins a transaction, invokes the method, and commits/rolls back based on outcome.</p>
+<p><strong>Common pitfalls:</strong></p>
+<ul>
+  <li><strong>Self-invocation:</strong> Calling <code>this.methodA()</code> from within the same class bypasses the proxy — @Transactional has no effect.</li>
+  <li><strong>Checked exceptions:</strong> By default, rollback only on <code>RuntimeException</code>. Use <code>rollbackFor=Exception.class</code> for checked exceptions.</li>
+  <li><strong>Private methods:</strong> Proxy can't intercept private methods — @Transactional on private methods is silently ignored.</li>
+  <li><strong>Propagation:</strong> REQUIRED (default), REQUIRES_NEW (new transaction), NESTED, SUPPORTS, NEVER, MANDATORY, NOT_SUPPORTED.</li>
+</ul>`
+      },
+      {
+        q: "How do you implement global exception handling in Spring Boot?",
+        tags: ["spring"],
+        answer: `<div class="code-block">@RestControllerAdvice
+<span class="kw">public class</span> <span class="nm">GlobalExceptionHandler</span> {
+
+    @ExceptionHandler(ResourceNotFoundException.<span class="kw">class</span>)
+    <span class="kw">public</span> ResponseEntity&lt;ErrorResponse&gt; <span class="fn">handleNotFound</span>(
+            ResourceNotFoundException ex) {
+        <span class="kw">return</span> ResponseEntity
+            .<span class="fn">status</span>(HttpStatus.NOT_FOUND)
+            .<span class="fn">body</span>(<span class="kw">new</span> <span class="fn">ErrorResponse</span>(ex.<span class="fn">getMessage</span>()));
+    }
+
+    @ExceptionHandler(Exception.<span class="kw">class</span>)
+    <span class="kw">public</span> ResponseEntity&lt;ErrorResponse&gt; <span class="fn">handleAll</span>(Exception ex) {
+        <span class="kw">return</span> ResponseEntity.<span class="fn">internalServerError</span>()
+            .<span class="fn">body</span>(<span class="kw">new</span> <span class="fn">ErrorResponse</span>(<span class="str">"Internal error"</span>));
+    }
+}</div>
+<p><code>@RestControllerAdvice</code> = <code>@ControllerAdvice</code> + <code>@ResponseBody</code>. Applies globally to all controllers.</p>`
+      },
+      {
+        q: "What happens internally when a @RestController handles a request?",
+        tags: ["spring"],
+        answer: `<p>Full request lifecycle:</p>
+<ol>
+  <li><strong>DispatcherServlet</strong> receives the HTTP request</li>
+  <li><strong>HandlerMapping</strong> maps URL to controller method</li>
+  <li><strong>HandlerAdapter</strong> invokes the method (processes @RequestBody via HttpMessageConverter)</li>
+  <li><strong>Controller method</strong> executes, returns object</li>
+  <li><strong>HttpMessageConverter</strong> (Jackson) serializes return value to JSON</li>
+  <li>Response written to HttpServletResponse</li>
+</ol>
+<p>Filters run before DispatcherServlet. Interceptors run around HandlerAdapter invocation. AOP aspects run around the bean method itself.</p>`
+      },
+      {
+        q: "JWT Authentication flow in Spring Security",
+        tags: ["spring"],
+        answer: `<ol>
+  <li>Client sends credentials → Auth endpoint returns signed JWT</li>
+  <li>Client includes JWT in <code>Authorization: Bearer &lt;token&gt;</code> header</li>
+  <li>Custom <code>OncePerRequestFilter</code> extracts and validates JWT</li>
+  <li>On valid token, sets <code>SecurityContextHolder</code> with Authentication object</li>
+  <li>Downstream security checks proceed normally</li>
+</ol>
+<div class="tip-box"><div class="tip-label">JWT Invalidation</div>JWTs are stateless — you can't invalidate them server-side without a blocklist (Redis). Use short expiry (15min) + refresh tokens stored server-side. Refresh token rotation prevents replay attacks.</div>`
+      },
+      {
+        q: "Rate Limiter design — restrict 5 requests per user per minute",
+        tags: ["spring","system"],
+        answer: `<p><strong>Token Bucket algorithm</strong> (recommended): Each user gets 5 tokens/minute. Each request consumes 1 token. Tokens refill at fixed rate.</p>
+<div class="code-block"><span class="cm">// Using Resilience4j RateLimiter</span>
+RateLimiterConfig config = RateLimiterConfig.custom()
+    .<span class="fn">limitForPeriod</span>(<span class="nm">5</span>)
+    .<span class="fn">limitRefreshPeriod</span>(Duration.<span class="fn">ofMinutes</span>(<span class="nm">1</span>))
+    .<span class="fn">timeoutDuration</span>(Duration.<span class="fn">ofMillis</span>(<span class="nm">0</span>))
+    .<span class="fn">build</span>();</div>
+<p>For distributed systems: store token bucket state in <strong>Redis</strong> with atomic INCR + expiry. Use Lua script for atomicity.</p>
+<p><strong>Other algorithms:</strong> Fixed Window (simple, burst at boundary), Sliding Window (more accurate), Leaky Bucket (smooth output).</p>`
+      }
+    ]
+  },
+  {
+    id: "database",
+    title: "Database & Hibernate",
+    icon: "🗄️",
+    color: "#10b981",
+    cat: "Database",
+    questions: [
+      {
+        q: "How does indexing improve performance? Composite vs Single index?",
+        tags: ["db"],
+        answer: `<p>An index is a B-tree (default) data structure that allows O(log n) lookups instead of O(n) full-table scans.</p>
+<p><strong>Single index:</strong> Optimal for high-cardinality single-column filters. <code>WHERE email = ?</code></p>
+<p><strong>Composite index:</strong> Index on (A, B, C). Follows <strong>leftmost prefix rule</strong> — works for queries on A, A+B, or A+B+C. Does NOT help for B alone or C alone.</p>
+<div class="warn-box"><div class="warn-label">⚠ Index Anti-patterns</div>Function on indexed column defeats index: <code>WHERE UPPER(name) = ?</code> won't use name index. Low-cardinality columns (boolean, status with 2-3 values) often not worth indexing. Over-indexing slows writes.</div>`
+      },
+      {
+        q: "N+1 query problem and how to solve it",
+        tags: ["db","spring"],
+        answer: `<p>N+1: Fetching a list of N entities, then firing 1 additional query per entity to load a related collection = N+1 total queries.</p>
+<div class="code-block"><span class="cm">// Problem: fetches all orders, then N queries for each user</span>
+orders.forEach(o -> o.getUser().<span class="fn">getName</span>());</div>
+<p><strong>Solutions:</strong></p>
+<ul>
+  <li><strong>JOIN FETCH:</strong> <code>SELECT o FROM Order o JOIN FETCH o.user</code></li>
+  <li><strong>@EntityGraph:</strong> Define fetch graph on repository method</li>
+  <li><strong>Batch fetching:</strong> <code>@BatchSize(size=30)</code> on the association</li>
+  <li><strong>DTO projection:</strong> JPQL constructor expression — fetch only what you need</li>
+</ul>
+<p>Enable <code>spring.jpa.show-sql=true</code> + <code>format_sql=true</code> to spot N+1 in dev.</p>`
+      },
+      {
+        q: "Lazy vs Eager loading in Hibernate",
+        tags: ["db"],
+        answer: `<p><strong>EAGER:</strong> Related entities loaded immediately in the same query (or secondary query). Risk: pulling in huge object graphs unnecessarily.</p>
+<p><strong>LAZY:</strong> Related entities loaded on first access — proxy object returned initially. Risk: LazyInitializationException if accessed outside of an open Session/transaction.</p>
+<table class="complexity-table">
+  <tr><th>Association</th><th>Default</th></tr>
+  <tr><td>@ManyToOne, @OneToOne</td><td>EAGER</td></tr>
+  <tr><td>@OneToMany, @ManyToMany</td><td>LAZY</td></tr>
+</table>
+<div class="tip-box"><div class="tip-label">Best Practice</div>Prefer LAZY everywhere. Use JOIN FETCH or @EntityGraph at the query level to eagerly load only when needed. Avoids accidental cartesian products.</div>`
+      },
+      {
+        q: "Transaction isolation levels — what they prevent",
+        tags: ["db"],
+        answer: `<table class="complexity-table">
+  <tr><th>Isolation Level</th><th>Dirty Read</th><th>Non-Repeatable Read</th><th>Phantom Read</th></tr>
+  <tr><td>READ UNCOMMITTED</td><td>❌ Possible</td><td>❌ Possible</td><td>❌ Possible</td></tr>
+  <tr><td>READ COMMITTED</td><td>✅ Prevented</td><td>❌ Possible</td><td>❌ Possible</td></tr>
+  <tr><td>REPEATABLE READ</td><td>✅</td><td>✅ Prevented</td><td>❌ Possible</td></tr>
+  <tr><td>SERIALIZABLE</td><td>✅</td><td>✅</td><td>✅ Prevented</td></tr>
+</table>
+<p>MySQL InnoDB default: REPEATABLE READ. PostgreSQL default: READ COMMITTED. Higher isolation = fewer anomalies but more locking contention.</p>`
+      },
+      {
+        q: "How to optimize a slow SQL query?",
+        tags: ["db"],
+        answer: `<ol>
+  <li><strong>EXPLAIN/EXPLAIN ANALYZE:</strong> Check execution plan — look for full table scans (type=ALL in MySQL)</li>
+  <li><strong>Indexes:</strong> Add composite indexes matching WHERE + ORDER BY columns. Follow leftmost prefix.</li>
+  <li><strong>Avoid SELECT *:</strong> Fetch only needed columns — reduces data transfer and enables covering indexes</li>
+  <li><strong>Rewrite subqueries:</strong> Often JOIN performs better than correlated subquery</li>
+  <li><strong>Pagination:</strong> Never use OFFSET for deep pagination — use keyset/cursor pagination</li>
+  <li><strong>Denormalize for reads:</strong> On hot read paths, pre-join data in a summary table</li>
+  <li><strong>Connection pooling:</strong> HikariCP with properly sized pool (formula: connections = cores × 2 + effective_spindle_count)</li>
+</ol>`
+      }
+    ]
+  },
+  {
+    id: "kafka",
+    title: "Kafka & Messaging",
+    icon: "📨",
+    color: "#f97316",
+    cat: "Kafka",
+    questions: [
+      {
+        q: "Kafka consumer lag keeps increasing even though consumers are healthy. Why?",
+        tags: ["kafka"],
+        answer: `<p>Consumer lag = latest offset - consumer's committed offset. Healthy consumers but rising lag means <strong>production rate > consumption rate.</strong></p>
+<p><strong>Investigate:</strong></p>
+<ul>
+  <li>Consumer processing time per message — is a downstream service (DB, API) slow?</li>
+  <li>Number of partitions vs number of consumers — max parallelism = number of partitions</li>
+  <li>Rebalancing events — frequent rebalances cause consumers to pause</li>
+  <li>Message size — large messages slow deserialization</li>
+  <li>GC pauses in consumer JVM causing poll timeout</li>
+</ul>
+<p><strong>Fix:</strong> Increase partitions (and match with more consumer instances), or optimize consumer processing (async handling, batch processing).</p>`
+      },
+      {
+        q: "Idempotency in Kafka — how to handle duplicate message processing?",
+        tags: ["kafka"],
+        answer: `<p>Kafka guarantees at-least-once delivery by default. Duplicates occur on consumer rebalance or retry.</p>
+<p><strong>Strategies:</strong></p>
+<ul>
+  <li><strong>Idempotent writes:</strong> Use a unique business key as DB primary key or unique constraint — second insert fails or upserts</li>
+  <li><strong>Deduplication store:</strong> Track processed message IDs in Redis with TTL matching max redelivery window</li>
+  <li><strong>Kafka Transactions:</strong> Producer enable.idempotence=true + transactional.id — exactly-once within Kafka</li>
+  <li><strong>Outbox pattern:</strong> Write event to DB outbox table in same transaction as business data</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Dead Letter Queue</div>After N retries, route to DLQ topic. Monitor DLQ for poison pills. Allows manual reprocessing without blocking main consumer.</div>`
+      },
+      {
+        q: "Kafka vs RabbitMQ — when to choose which?",
+        tags: ["kafka"],
+        answer: `<table class="complexity-table">
+  <tr><th>Dimension</th><th>Kafka</th><th>RabbitMQ</th></tr>
+  <tr><td>Model</td><td>Log-based, pull</td><td>Queue-based, push</td></tr>
+  <tr><td>Retention</td><td>Configurable (days/weeks)</td><td>Until consumed</td></tr>
+  <tr><td>Replay</td><td>✅ Yes — seek to offset</td><td>❌ No</td></tr>
+  <tr><td>Throughput</td><td>Millions/sec</td><td>Thousands/sec</td></tr>
+  <tr><td>Ordering</td><td>Per partition</td><td>Per queue</td></tr>
+  <tr><td>Use case</td><td>Event streaming, audit logs</td><td>Task queues, RPC</td></tr>
+</table>
+<p>Choose Kafka for event-driven architecture, audit trails, stream processing. Choose RabbitMQ for simple task queues, request/reply patterns.</p>`
+      }
+    ]
+  },
+  {
+    id: "microservices",
+    title: "Microservices & System Design",
+    icon: "🔧",
+    color: "#ec4899",
+    cat: "Microservices",
+    questions: [
+      {
+        q: "Circuit Breaker pattern — configured but cascading failures still happen. Why?",
+        tags: ["micro","spring"],
+        answer: `<p>Circuit breaker protects the <em>caller</em>, not the downstream service. Common reasons it still fails:</p>
+<ul>
+  <li><strong>Threshold too high:</strong> 50% failure threshold with low volume — 3/6 failures opens, but 3 succeeded first, already causing cascading load</li>
+  <li><strong>Timeout not configured:</strong> Circuit breaker fires only on exceptions, not on slow responses that don't timeout</li>
+  <li><strong>Bulkhead missing:</strong> Thread pool shared across services — one slow service exhausts threads, blocking healthy service calls</li>
+  <li><strong>Half-open not shedding properly:</strong> Too many test requests in half-open state overwhelm recovering service</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Resilience4j Config</div>Combine CircuitBreaker + TimeLimiter + Bulkhead + Retry in the correct order: Retry(CircuitBreaker(TimeLimiter(Bulkhead(function))))</div>`
+      },
+      {
+        q: "Saga pattern — Choreography vs Orchestration",
+        tags: ["micro","system"],
+        answer: `<p><strong>Choreography:</strong> Each service publishes events and reacts to others' events. No central coordinator. Loose coupling but hard to trace flow.</p>
+<p><strong>Orchestration:</strong> Central Saga orchestrator calls each service and handles failures with compensating transactions. Easier to trace but orchestrator is a potential bottleneck.</p>
+<p><strong>Compensating transactions:</strong> Each step must have a reversible action. E.g., payment deducted → on failure: issue refund.</p>
+<div class="tip-box"><div class="tip-label">When to use</div>Choreography: simple flows, small teams, strong event-driven culture. Orchestration: complex multi-step flows (payments, order fulfillment), need for visibility and traceability.</div>`
+      },
+      {
+        q: "Database per service vs shared DB — tradeoffs",
+        tags: ["micro","db"],
+        answer: `<table class="complexity-table">
+  <tr><th></th><th>Shared DB</th><th>DB per Service</th></tr>
+  <tr><td>Coupling</td><td>High — schema changes affect all</td><td>Low — own schema</td></tr>
+  <tr><td>ACID</td><td>✅ Native transactions</td><td>❌ Need Saga/2PC</td></tr>
+  <tr><td>Scalability</td><td>Single bottleneck</td><td>Independent scaling</td></tr>
+  <tr><td>Cross-service queries</td><td>Simple JOINs</td><td>API composition / CQRS</td></tr>
+  <tr><td>Fault isolation</td><td>DB outage = all services down</td><td>Isolated</td></tr>
+</table>
+<p>Real-world: Start shared, migrate to DB per service as bounded contexts become clear. Premature separation is expensive.</p>`
+      },
+      {
+        q: "How to handle one microservice being slow and affecting the entire platform?",
+        tags: ["micro","system"],
+        answer: `<p>This is a cascading failure / resource exhaustion problem.</p>
+<ol>
+  <li><strong>Bulkhead:</strong> Dedicate separate thread pools per downstream service call. Slow service only exhausts its own pool.</li>
+  <li><strong>Timeout:</strong> Always set aggressive timeouts on HTTP/gRPC calls. Never use default infinite timeout.</li>
+  <li><strong>Circuit Breaker:</strong> Stop sending to the slow service after threshold — return fallback/degraded response.</li>
+  <li><strong>Retry with backoff + jitter:</strong> Prevents thundering herd when service recovers.</li>
+  <li><strong>Async where possible:</strong> Decouple via message queue — slow consumer doesn't block producer.</li>
+  <li><strong>Tracing:</strong> Distributed trace immediately shows which span is slow.</li>
+</ol>`
+      },
+      {
+        q: "Your API works locally but fails in production — how to debug?",
+        tags: ["micro","system"],
+        answer: `<p>Classic environment parity problem. Systematic checklist:</p>
+<ul>
+  <li><strong>Environment config:</strong> Different DB URLs, secrets, feature flags, Spring profiles</li>
+  <li><strong>Network:</strong> Firewalls, security groups, VPC routing — local bypasses all of this</li>
+  <li><strong>TLS/Certificates:</strong> Self-signed certs rejected in prod, accepted locally</li>
+  <li><strong>Dependencies:</strong> Different library versions between local/prod artifact</li>
+  <li><strong>Resource limits:</strong> Memory/CPU constraints in prod container not present locally</li>
+  <li><strong>Data:</strong> Prod data has edge cases (nulls, special chars) not in local test data</li>
+  <li><strong>Logging:</strong> Add structured logging + distributed tracing BEFORE deploying, not after</li>
+</ul>`
+      },
+      {
+        q: "Retry logic creates duplicate transactions — how to prevent?",
+        tags: ["micro","system"],
+        answer: `<p>This is an <strong>idempotency</strong> problem.</p>
+<ul>
+  <li><strong>Idempotency Key:</strong> Client generates unique key per request (UUID). Server stores key → result mapping. On duplicate key, return cached result without reprocessing.</li>
+  <li><strong>Conditional updates:</strong> Check state before applying. <code>UPDATE payment SET status='PROCESSED' WHERE id=? AND status='PENDING'</code></li>
+  <li><strong>Database unique constraint:</strong> On the idempotency key column — second insert throws exception, handled gracefully.</li>
+  <li><strong>Outbox pattern:</strong> Write intent to DB atomically with business data. Separate publisher reads outbox — deduplication at publisher level.</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Key Rule</div>POST should be idempotent when used for payment/booking. GET is naturally idempotent. PUT by definition is idempotent. DELETE should also be idempotent (second delete returns 404, not error).</div>`
+      }
+    ]
+  },
+  {
+    id: "performance",
+    title: "Performance & Scalability",
+    icon: "⚡",
+    color: "#6366f1",
+    cat: "System Design",
+    questions: [
+      {
+        q: "Traffic increases 10x suddenly (1k → 10k req/min). What do you check first?",
+        tags: ["perf","system"],
+        answer: `<p>Triage in order:</p>
+<ol>
+  <li><strong>Is it legitimate traffic?</strong> Check CDN/WAF for bot traffic, DDoS patterns</li>
+  <li><strong>Where's the bottleneck?</strong> CPU, memory, DB connections, thread pool — check dashboards</li>
+  <li><strong>Database:</strong> Connection pool exhausted? Query time up? Add read replicas, enable query cache</li>
+  <li><strong>Horizontal scaling:</strong> Trigger auto-scaling or manually add instances</li>
+  <li><strong>Caching:</strong> Cache hot read paths immediately — reduces DB load drastically</li>
+  <li><strong>Rate limiting / shedding:</strong> Protect the system from overload — return 429 for excess traffic</li>
+  <li><strong>Async offloading:</strong> Move non-critical work to queues (email, notifications)</li>
+</ol>`
+      },
+      {
+        q: "Spring Boot API responding in 8 seconds instead of 200ms. How to troubleshoot?",
+        tags: ["perf","spring"],
+        answer: `<ol>
+  <li><strong>Distributed tracing:</strong> Find which span is slow — is it DB, external API, or business logic?</li>
+  <li><strong>Thread dump:</strong> <code>jstack</code> or Actuator <code>/threaddump</code> — are threads blocked waiting for locks/connections?</li>
+  <li><strong>DB:</strong> Enable slow query log. Check connection pool wait time (HikariCP metrics). N+1 queries?</li>
+  <li><strong>External calls:</strong> Any synchronous HTTP calls to slow services? Add timeout + circuit breaker.</li>
+  <li><strong>GC pauses:</strong> Check GC logs for stop-the-world pauses (<code>-Xlog:gc*</code>)</li>
+  <li><strong>Memory pressure:</strong> High heap usage → frequent GC → latency spikes</li>
+</ol>
+<div class="tip-box"><div class="tip-label">Tools</div>Actuator /metrics, /httptrace, /threaddump. Honeycomb/Jaeger for tracing. JProfiler / async-profiler for CPU/memory profiling.</div>`
+      },
+      {
+        q: "JVM memory usage slowly increases and crashes after hours. What's happening?",
+        tags: ["perf"],
+        answer: `<p>Classic memory leak. Investigation:</p>
+<ol>
+  <li><strong>Heap dump:</strong> <code>jmap -dump:live,format=b,file=heap.hprof &lt;pid&gt;</code> then analyze with Eclipse MAT or JVisualVM</li>
+  <li><strong>Look for:</strong> Growing collections in static fields, ThreadLocal not removed, unclosed streams/connections, event listeners not deregistered</li>
+  <li><strong>Metaspace leak:</strong> Dynamic class generation (reflection, CGLIB) without GC — set <code>-XX:MaxMetaspaceSize</code></li>
+  <li><strong>Off-heap:</strong> Direct ByteBuffers, mapped files — monitored separately</li>
+</ol>
+<div class="warn-box"><div class="warn-label">Common culprits in Spring</div>Hibernate second-level cache growing unbounded. Caffeine/Guava cache without eviction policy. Async task queues holding closures that reference large objects.</div>`
+      },
+      {
+        q: "Autoscaling adds instances but latency still increases — why?",
+        tags: ["perf","system"],
+        answer: `<p>Adding compute doesn't help if the bottleneck isn't compute:</p>
+<ul>
+  <li><strong>Database:</strong> Shared DB can't scale with app instances. More instances = more connections = more DB contention. Need connection pooling (PgBouncer), read replicas, or caching.</li>
+  <li><strong>External service:</strong> Downstream API has its own rate limit/capacity — more callers don't help.</li>
+  <li><strong>Lock contention:</strong> Synchronized blocks become bottleneck under high concurrency.</li>
+  <li><strong>Warm-up time:</strong> New instances take time to warm JIT, fill caches — initial traffic to new instances is slow.</li>
+  <li><strong>Session affinity:</strong> Load balancer routing all traffic to same instance (sticky sessions misconfigured).</li>
+</ul>`
+      }
+    ]
+  },
+  {
+    id: "collections",
+    title: "Java Collections Deep Dive",
+    icon: "📦",
+    color: "#14b8a6",
+    cat: "Core Java",
+    questions: [
+      {
+        q: "ArrayList vs LinkedList — time complexity comparison",
+        tags: ["java"],
+        answer: `<table class="complexity-table">
+  <tr><th>Operation</th><th>ArrayList</th><th>LinkedList</th></tr>
+  <tr><td>get(i)</td><td class="o1">O(1)</td><td class="on">O(n)</td></tr>
+  <tr><td>add(end)</td><td class="o1">O(1) amortized</td><td class="o1">O(1)</td></tr>
+  <tr><td>add(i)</td><td class="on">O(n) — shift</td><td class="on">O(n) — traverse</td></tr>
+  <tr><td>remove(i)</td><td class="on">O(n) — shift</td><td class="on">O(n) — traverse</td></tr>
+  <tr><td>Memory</td><td>Compact array</td><td>Node overhead (2 pointers each)</td></tr>
+</table>
+<div class="tip-box"><div class="tip-label">Real-world choice</div>Almost always use ArrayList. LinkedList is only faster for frequent add/remove at known iterator positions. For stack/queue semantics, use ArrayDeque — faster than LinkedList in practice.</div>`
+      },
+      {
+        q: "TreeMap vs HashMap vs LinkedHashMap — when to use each",
+        tags: ["java"],
+        answer: `<ul>
+  <li><strong>HashMap:</strong> O(1) avg — use when order doesn't matter and you need fast lookups</li>
+  <li><strong>LinkedHashMap:</strong> HashMap + maintains insertion order (or LRU access order if constructed with accessOrder=true). O(1) operations. Use for LRU caches, predictable iteration.</li>
+  <li><strong>TreeMap:</strong> Red-Black Tree, sorted by key, O(log n). Use when you need sorted keys, range queries (<code>subMap</code>, <code>headMap</code>, <code>floorKey</code>), or natural ordering.</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Interview follow-up</div>TreeMap uses Comparable (natural order) or Comparator. If your key doesn't implement Comparable and you don't provide Comparator, TreeMap throws ClassCastException at runtime — not compile time.</div>`
+      }
+    ]
+  }
+];
+
+let activeFilter = "All";
+
+// --- Read state (localStorage) ---
+const STORAGE_KEY = "java_prep_read";
+function getReadSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+function saveReadSet(set) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
+}
+function makeCardId(secId, qIdx) { return `${secId}__${qIdx}`; }
+
+function toggleRead(cardId, btn, card) {
+  const read = getReadSet();
+  if (read.has(cardId)) {
+    read.delete(cardId);
+    btn.classList.remove("done");
+    btn.textContent = "";
+    card.classList.remove("read");
+  } else {
+    read.add(cardId);
+    btn.classList.add("done");
+    btn.textContent = "✓";
+    card.classList.add("read");
+  }
+  saveReadSet(read);
+  updateProgressUI();
+}
+
+function getTotalQuestions() {
+  return sections.reduce((sum, s) => sum + s.questions.length, 0);
+}
+
+function updateProgressUI() {
+  const read = getReadSet();
+  const total = getTotalQuestions();
+  const done = read.size;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById("prog-fill").style.width = pct + "%";
+  document.getElementById("prog-label").textContent = `${done} / ${total} read`;
+  document.getElementById("read-count").textContent = done;
+  document.getElementById("unread-count").textContent = total - done;
+  document.getElementById("total-q").textContent = total;
+}
+
+// --- TOC ---
+function buildTOC() {
+  const toc = document.getElementById("toc");
+  sections.forEach(s => {
+    const li = document.createElement("li");
+    li.className = "toc-item";
+    li.id = "toc-" + s.id;
+    li.innerHTML = `<span class="toc-dot" style="background:${s.color}"></span>${s.title}`;
+    li.onclick = () => {
+      document.getElementById("sec-" + s.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    toc.appendChild(li);
+  });
+}
+
+// --- Render ---
+function renderSections(filter = "All", search = "") {
+  const content = document.getElementById("content");
+  // preserve progress bar
+  const progBar = content.querySelector(".overall-progress");
+  content.innerHTML = "";
+  if (progBar) content.appendChild(progBar);
+
+  const read = getReadSet();
+  let totalShown = 0;
+
+  sections.forEach(sec => {
+    let matchesFilter = filter === "All" || sec.cat === filter;
+    if (filter === "Read" || filter === "Unread") matchesFilter = true; // handle below per-question
+
+    if (!matchesFilter) return;
+
+    const filteredQs = sec.questions.map((q, i) => ({q, i})).filter(({q, i}) => {
+      const cardId = makeCardId(sec.id, i);
+      const isRead = read.has(cardId);
+      if (filter === "Read" && !isRead) return false;
+      if (filter === "Unread" && isRead) return false;
+      if (search && !q.q.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+
+    if (filteredQs.length === 0) return;
+    totalShown += filteredQs.length;
+
+    // section read progress
+    const secReadCount = sec.questions.filter((_, i) => read.has(makeCardId(sec.id, i))).length;
+    const secTotal = sec.questions.length;
+
+    const div = document.createElement("div");
+    div.className = "section";
+    div.id = "sec-" + sec.id;
+
+    div.innerHTML = `
+      <div class="section-header">
+        <span class="section-icon">${sec.icon}</span>
+        <span class="section-title" style="color:${sec.color}">${sec.title}</span>
+        <span class="sec-prog">${secReadCount}/${secTotal}</span>
+        <span class="section-count" style="margin-left:auto">${filteredQs.length} shown</span>
+      </div>
+    `;
+
+    filteredQs.forEach(({q, i}) => {
+      const cardId = makeCardId(sec.id, i);
+      const isRead = read.has(cardId);
+
+      const card = document.createElement("div");
+      card.className = "card" + (isRead ? " read" : "");
+      card.dataset.cat = sec.cat;
+      card.dataset.cardId = cardId;
+
+      const tagHtml = (q.tags || []).map(t => {
+        const map = { java: ["Java","tag-java"], spring: ["Spring","tag-spring"], dsa: ["DSA","tag-dsa"], db: ["DB","tag-db"], kafka: ["Kafka","tag-kafka"], system: ["System","tag-system"], micro: ["Microservices","tag-micro"], perf: ["Performance","tag-perf"] };
+        const [label, cls] = map[t] || [t, "tag-java"];
+        return `<span class="tag ${cls}">${label}</span>`;
+      }).join("");
+
+      card.innerHTML = `
+        <div class="card-header" onclick="toggleCard(this)">
+          <span class="card-num">#${String(i+1).padStart(2,"0")}</span>
+          <div style="flex:1">
+            <div class="card-q">${q.q}</div>
+            <div class="card-tags">${tagHtml}</div>
+          </div>
+          <span class="chevron">▾</span>
+          <button class="check-btn ${isRead ? 'done' : ''}" title="Mark as read" onclick="event.stopPropagation(); toggleRead('${cardId}', this, this.closest('.card'))">${isRead ? '✓' : ''}</button>
+        </div>
+        <div class="card-body"><div class="answer-block">${q.answer}</div></div>
+      `;
+      div.appendChild(card);
+    });
+
+    content.appendChild(div);
+  });
+
+  if (totalShown === 0) {
+    const msg = document.createElement("div");
+    msg.className = "no-results";
+    msg.innerHTML = `<span>🔍</span>No questions match your search.`;
+    content.appendChild(msg);
+  }
+
+  updateProgressUI();
+}
+
+function toggleCard(header) {
+  const card = header.parentElement;
+  card.classList.toggle("open");
+}
+
+function setFilter(cat, btn) {
+  activeFilter = cat;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  renderSections(activeFilter, document.getElementById("search").value);
+}
+
+function filterCards() {
+  renderSections(activeFilter, document.getElementById("search").value);
+}
+
+buildTOC();
+renderSections();
+updateProgressUI();
+
+// TOC active highlight on scroll
+window.addEventListener("scroll", () => {
+  const sections_els = document.querySelectorAll(".section");
+  let current = "";
+  sections_els.forEach(s => {
+    if (s.getBoundingClientRect().top < 200) current = s.id.replace("sec-", "");
+  });
+  document.querySelectorAll(".toc-item").forEach(t => {
+    t.classList.toggle("active", t.id === "toc-" + current);
+  });
+});
+</script>
+</body>
+</html>
