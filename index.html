@@ -310,6 +310,7 @@
   <button class="filter-btn" data-cat="Kafka" onclick="setFilter('Kafka', this)">Kafka</button>
   <button class="filter-btn" data-cat="Microservices" onclick="setFilter('Microservices', this)">Microservices</button>
   <button class="filter-btn" data-cat="System Design" onclick="setFilter('System Design', this)">System Design</button>
+  <button class="filter-btn" data-cat="DSA" onclick="setFilter('DSA', this)">DSA Top 20</button>
   <button class="filter-btn" data-cat="Read" onclick="setFilter('Read', this)">✅ Read</button>
   <button class="filter-btn" data-cat="Unread" onclick="setFilter('Unread', this)">⬜ Unread</button>
 </div>
@@ -991,6 +992,505 @@ orders.forEach(o -> o.getUser().<span class="fn">getName</span>());</div>
   <li><strong>TreeMap:</strong> Red-Black Tree, sorted by key, O(log n). Use when you need sorted keys, range queries (<code>subMap</code>, <code>headMap</code>, <code>floorKey</code>), or natural ordering.</li>
 </ul>
 <div class="tip-box"><div class="tip-label">Interview follow-up</div>TreeMap uses Comparable (natural order) or Comparator. If your key doesn't implement Comparable and you don't provide Comparator, TreeMap throws ClassCastException at runtime — not compile time.</div>`
+      }
+    ]
+  },
+  {
+    id: "scenario",
+    title: "Scenario-Based & Troubleshooting",
+    icon: "🔥",
+    color: "#f43f5e",
+    cat: "System Design",
+    questions: [
+      {
+        q: "Your API response time increases from 200ms to 5 seconds. How do you investigate?",
+        tags: ["perf","system"],
+        answer: `<ol>
+  <li><strong>Distributed tracing first:</strong> Use Jaeger/Honeycomb to find which span is slow — DB, downstream service, or internal logic</li>
+  <li><strong>Thread dump:</strong> Are threads blocked on DB connections or locks? <code>jstack &lt;pid&gt;</code> or Actuator <code>/threaddump</code></li>
+  <li><strong>DB:</strong> Enable slow query log. Check HikariCP pool wait time metrics. N+1 queries?</li>
+  <li><strong>External calls:</strong> Synchronous HTTP call to slow service? Add timeout + circuit breaker</li>
+  <li><strong>GC pauses:</strong> <code>-Xlog:gc*</code> — stop-the-world pauses spike latency</li>
+  <li><strong>Recent deployment:</strong> Was there a code change? Roll back and compare</li>
+  <li><strong>Traffic spike:</strong> Higher concurrency exhausting thread pool or connection pool?</li>
+</ol>
+<div class="tip-box"><div class="tip-label">Rule of thumb</div>Latency spike without CPU/memory spike = I/O bound problem (DB, network). With CPU spike = compute bound (GC, business logic).</div>`
+      },
+      {
+        q: "A downstream microservice is slow. How do you prevent it from affecting your entire application?",
+        tags: ["micro","system"],
+        answer: `<ul>
+  <li><strong>Timeout:</strong> Always set aggressive timeouts. Never rely on default infinite timeout.</li>
+  <li><strong>Circuit Breaker:</strong> After N failures, open circuit — return fallback immediately without hitting slow service</li>
+  <li><strong>Bulkhead:</strong> Dedicate a separate thread pool per downstream service. Slow service exhausts only its own pool</li>
+  <li><strong>Retry with exponential backoff + jitter:</strong> Don't hammer a struggling service</li>
+  <li><strong>Async/queue:</strong> If the operation is non-critical, move it to a message queue — decouple from request path</li>
+  <li><strong>Fallback response:</strong> Return cached/degraded data rather than failing entirely</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Resilience4j order</div>Retry(CircuitBreaker(TimeLimiter(Bulkhead(fn))))</div>`
+      },
+      {
+        q: "Database connection pool is exhausted. What are the possible reasons?",
+        tags: ["db","perf"],
+        answer: `<ul>
+  <li><strong>Connection leak:</strong> Connections acquired but never returned — missing try-with-resources, exception path skips close</li>
+  <li><strong>Long-running transactions:</strong> @Transactional methods holding connections too long (external API calls inside transaction)</li>
+  <li><strong>Pool too small:</strong> Default HikariCP pool size is 10 — too small for high traffic. Formula: <code>connections = cores × 2 + spindle_count</code></li>
+  <li><strong>N+1 queries:</strong> Each request fires many queries, each needing a connection longer</li>
+  <li><strong>Slow queries:</strong> Queries taking seconds hold connections for seconds</li>
+  <li><strong>Traffic spike:</strong> More concurrent requests than pool can serve</li>
+</ul>
+<div class="warn-box"><div class="warn-label">Debug</div>Check <code>hikaricp.connections.pending</code> metric and <code>hikaricp.connections.active</code>. Enable HikariCP leak detection: <code>spring.datasource.hikari.leak-detection-threshold=2000</code></div>`
+      },
+      {
+        q: "How do you handle duplicate payment requests caused by retries or double-clicks?",
+        tags: ["system","micro"],
+        answer: `<p><strong>Idempotency Key pattern:</strong></p>
+<ol>
+  <li>Client generates a UUID per payment attempt and sends it as a header: <code>Idempotency-Key: uuid</code></li>
+  <li>Server checks Redis/DB for this key before processing</li>
+  <li>If found → return cached result immediately, no reprocessing</li>
+  <li>If not found → process and store result with the key (with TTL)</li>
+</ol>
+<div class="code-block"><span class="cm">// Pseudo-code</span>
+String key = request.getHeader(<span class="str">"Idempotency-Key"</span>);
+<span class="kw">if</span> (redis.<span class="fn">exists</span>(key)) <span class="kw">return</span> redis.<span class="fn">get</span>(key);
+PaymentResult result = <span class="fn">processPayment</span>(request);
+redis.<span class="fn">setex</span>(key, <span class="nm">86400</span>, result); <span class="cm">// 24h TTL</span>
+<span class="kw">return</span> result;</div>
+<div class="tip-box"><div class="tip-label">For DB</div>Use a UNIQUE constraint on the idempotency_key column. Second insert throws exception → catch and return existing result.</div>`
+      },
+      {
+        q: "Redis is down. Should your application also go down? How do you design the fallback?",
+        tags: ["system","micro"],
+        answer: `<p><strong>No — Redis should be a soft dependency, not a hard one.</strong></p>
+<ul>
+  <li><strong>Cache miss fallback:</strong> On Redis failure, go directly to DB. Add try-catch around all cache operations.</li>
+  <li><strong>Circuit breaker on Redis:</strong> If Redis fails repeatedly, open circuit and skip cache layer entirely</li>
+  <li><strong>Degraded mode:</strong> For rate limiting, fall back to in-memory counter (per-instance, less accurate but better than total failure)</li>
+  <li><strong>Session:</strong> If Redis stores sessions, fall back to DB-backed sessions or stateless JWT</li>
+  <li><strong>Never let cache failure propagate:</strong> All cache reads/writes in try-catch with metrics tracking cache availability</li>
+</ul>`
+      },
+      {
+        q: "One SQL query takes 10 seconds in production but runs fast in dev. How to investigate?",
+        tags: ["db"],
+        answer: `<ul>
+  <li><strong>Data volume:</strong> Prod has millions of rows, dev has hundreds. Full table scan that's fast on small data is slow on large data</li>
+  <li><strong>Missing index:</strong> Index exists in dev but wasn't added to prod, or index was dropped/not migrated</li>
+  <li><strong>Stale statistics:</strong> Query planner uses outdated stats. Run <code>ANALYZE</code> (Postgres) or <code>UPDATE STATISTICS</code> (SQL Server)</li>
+  <li><strong>Parameter sniffing:</strong> SQL Server/Oracle caches a plan for one param value that's wrong for another</li>
+  <li><strong>Lock contention:</strong> Prod has concurrent writers; dev doesn't. Query waits for locks</li>
+  <li><strong>Connection pool:</strong> Query waits in queue for a connection in prod</li>
+</ul>
+<div class="tip-box"><div class="tip-label">Always</div>Run EXPLAIN ANALYZE in prod (read-only replica). Compare execution plans between dev and prod.</div>`
+      },
+      {
+        q: "Your Kubernetes pod keeps restarting but logs show no clear error. How do you debug?",
+        tags: ["system"],
+        answer: `<ol>
+  <li><strong>OOMKilled:</strong> <code>kubectl describe pod &lt;name&gt;</code> — check <code>Last State: OOMKilled</code>. Container exceeded memory limit.</li>
+  <li><strong>Liveness probe failing:</strong> App starts but health endpoint returns non-200 or times out. Check probe config and endpoint logic.</li>
+  <li><strong>Crash before log flush:</strong> App crashes too fast — logs don't make it out. Check <code>kubectl logs --previous &lt;pod&gt;</code></li>
+  <li><strong>Startup too slow:</strong> Readiness probe fails before app finishes initializing — increase <code>initialDelaySeconds</code></li>
+  <li><strong>Missing env/secret:</strong> App crashes on startup due to missing required config. Check <code>kubectl get events</code></li>
+</ol>`
+      },
+      {
+        q: "A production issue happens only under heavy traffic and cannot be reproduced locally. What is your approach?",
+        tags: ["perf","system"],
+        answer: `<ol>
+  <li><strong>Structured logging + correlation IDs:</strong> Every request gets a trace ID logged at entry. Filter logs by trace ID to reconstruct one failed request.</li>
+  <li><strong>Distributed tracing:</strong> Check Jaeger/Honeycomb for slow traces only visible at scale</li>
+  <li><strong>Metrics diff:</strong> Compare Prometheus/Grafana metrics between normal and high traffic — thread pool saturation? DB wait time? GC frequency?</li>
+  <li><strong>Load test staging:</strong> Use Gatling/k6 to simulate prod traffic pattern on staging</li>
+  <li><strong>Feature flags:</strong> Gradually roll out to subset of traffic and monitor</li>
+  <li><strong>Async profiler:</strong> Attach async-profiler to prod instance during incident — no restart needed, low overhead</li>
+</ol>`
+      }
+    ]
+  },
+  {
+    id: "solid",
+    title: "SOLID Principles",
+    icon: "🏛️",
+    color: "#8b5cf6",
+    cat: "Core Java",
+    questions: [
+      {
+        q: "PaymentService has 15 if-else for payment types. Which SOLID principle is violated?",
+        tags: ["java"],
+        answer: `<p><strong>Open/Closed Principle (OCP)</strong> — the class is open for modification (you add an else-if for every new payment type) instead of being open for extension.</p>
+<p><strong>Fix:</strong> Define a <code>PaymentStrategy</code> interface. Each payment type implements it. A registry/factory maps payment type → implementation. Adding a new type = adding a new class, zero modification to existing code.</p>
+<div class="code-block"><span class="kw">interface</span> <span class="nm">PaymentStrategy</span> {
+    PaymentResult <span class="fn">process</span>(PaymentRequest req);
+}
+<span class="kw">class</span> <span class="nm">CreditCardPayment</span> <span class="kw">implements</span> PaymentStrategy { ... }
+<span class="kw">class</span> <span class="nm">UpiPayment</span> <span class="kw">implements</span> PaymentStrategy { ... }</div>
+<div class="tip-box"><div class="tip-label">Also violates</div>SRP — one class making decisions for all payment types. Each strategy class has one reason to change.</div>`
+      },
+      {
+        q: "Why is constructor injection preferred over field injection (@Autowired on field)?",
+        tags: ["spring","java"],
+        answer: `<ul>
+  <li><strong>Testability:</strong> Constructor injection lets you instantiate the class in unit tests without Spring context — just <code>new MyService(mockRepo)</code>. Field injection requires reflection or Spring context.</li>
+  <li><strong>Immutability:</strong> Dependencies can be <code>final</code> — guaranteed non-null after construction</li>
+  <li><strong>Circular dependency detection:</strong> Spring fails fast at startup with constructor injection. Field injection silently creates circular proxies that fail at runtime.</li>
+  <li><strong>Explicit contract:</strong> Constructor signature documents required dependencies clearly</li>
+</ul>
+<div class="warn-box"><div class="warn-label">Field injection problem</div>@Autowired on a field can be null if the bean is instantiated outside Spring (e.g., in tests). Constructor injection makes this impossible.</div>`
+      },
+      {
+        q: "Rectangle-Square LSP violation — why is it the classic example?",
+        tags: ["java"],
+        answer: `<p>Liskov Substitution Principle: A subclass should be substitutable for its parent without breaking program correctness.</p>
+<div class="code-block">Rectangle r = <span class="kw">new</span> <span class="fn">Square</span>(); <span class="cm">// Square extends Rectangle</span>
+r.<span class="fn">setWidth</span>(<span class="nm">5</span>);
+r.<span class="fn">setHeight</span>(<span class="nm">4</span>);
+<span class="cm">// Expected area: 20. Square gives 16 (both set to 4)</span></div>
+<p>Square overrides <code>setWidth</code> to also set height (to keep it square). This changes the behavior contract of Rectangle — code that works correctly with Rectangle breaks with Square.</p>
+<div class="tip-box"><div class="tip-label">Fix</div>Don't model inheritance on "is-a" in the real world. Model on behavioral substitutability. Square and Rectangle should be sibling implementations of a Shape interface, not parent-child.</div>`
+      },
+      {
+        q: "Which SOLID principle improves unit testability the most?",
+        tags: ["java"],
+        answer: `<p><strong>Dependency Inversion Principle (DIP)</strong> — depend on abstractions (interfaces), not concretions.</p>
+<p>When your class depends on an interface, you can inject a mock in tests. When it depends on a concrete class (especially one that creates DB connections, sends emails, etc.), testing requires the real infrastructure.</p>
+<p><strong>Runner-up: SRP</strong> — small, focused classes are easier to test in isolation. A 2000-line God class has too many dependencies and too many code paths to test meaningfully.</p>`
+      },
+      {
+        q: "What problems do 'fat interfaces' create? How do you split them without breaking consumers?",
+        tags: ["java"],
+        answer: `<p><strong>Fat interface problem (ISP violation):</strong> Implementing classes are forced to implement methods they don't need, often leaving them empty or throwing <code>UnsupportedOperationException</code>.</p>
+<p><strong>Splitting without breaking:</strong></p>
+<ol>
+  <li>Create new narrower interfaces extracted from the fat one</li>
+  <li>Have the fat interface extend all the narrower ones — existing consumers still compile</li>
+  <li>Gradually migrate consumers to use the narrower interface they actually need</li>
+  <li>Eventually deprecate the fat interface</li>
+</ol>
+<div class="tip-box"><div class="tip-label">Microservices angle</div>ISP is especially important in microservices — a service shouldn't be forced to expose methods it doesn't own just to satisfy a shared interface contract.</div>`
+      }
+    ]
+  },
+  {
+    id: "spring-deep",
+    title: "Spring Boot Deep Dive",
+    icon: "🌿",
+    color: "#06b6d4",
+    cat: "Spring Boot",
+    questions: [
+      {
+        q: "What is @SpringBootApplication and what does it combine?",
+        tags: ["spring"],
+        answer: `<p><code>@SpringBootApplication</code> = <code>@Configuration</code> + <code>@EnableAutoConfiguration</code> + <code>@ComponentScan</code></p>
+<ul>
+  <li><strong>@Configuration:</strong> Marks class as source of bean definitions</li>
+  <li><strong>@EnableAutoConfiguration:</strong> Reads <code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code> and activates matching configurations based on <code>@ConditionalOn*</code> annotations</li>
+  <li><strong>@ComponentScan:</strong> Scans current package and sub-packages for <code>@Component</code>, <code>@Service</code>, <code>@Repository</code>, <code>@Controller</code></li>
+</ul>`
+      },
+      {
+        q: "What is Spring Boot Auto Configuration and how do you override it?",
+        tags: ["spring"],
+        answer: `<p>Auto-configuration activates beans based on what's on the classpath, guarded by <code>@ConditionalOnClass</code>, <code>@ConditionalOnMissingBean</code>, <code>@ConditionalOnProperty</code>, etc.</p>
+<p><strong>How to override:</strong></p>
+<ul>
+  <li><strong>Define your own bean:</strong> If you declare a bean of the same type, <code>@ConditionalOnMissingBean</code> prevents Spring from creating the auto-configured one</li>
+  <li><strong>Exclude explicitly:</strong> <code>@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)</code></li>
+  <li><strong>Property:</strong> Many auto-configs check properties — e.g., <code>spring.autoconfigure.exclude=...</code></li>
+</ul>
+<div class="code-block"><span class="cm">// Your bean takes precedence</span>
+@Bean
+<span class="kw">public</span> DataSource <span class="fn">dataSource</span>() { <span class="cm">// auto-config's DataSource won't be created</span>
+    <span class="kw">return</span> <span class="fn">myCustomDataSource</span>();
+}</div>`
+      },
+      {
+        q: "Explain the complete Spring Bean lifecycle.",
+        tags: ["spring"],
+        answer: `<ol>
+  <li><strong>Instantiation:</strong> Spring creates bean instance via constructor</li>
+  <li><strong>Dependency Injection:</strong> Properties and dependencies are injected</li>
+  <li><strong>BeanNameAware, BeanFactoryAware:</strong> Awareness interfaces called if implemented</li>
+  <li><strong>BeanPostProcessor.postProcessBeforeInitialization:</strong> Pre-init hook</li>
+  <li><strong>@PostConstruct / InitializingBean.afterPropertiesSet():</strong> Custom init logic</li>
+  <li><strong>BeanPostProcessor.postProcessAfterInitialization:</strong> Post-init hook (AOP proxies created here)</li>
+  <li><strong>Bean ready for use</strong></li>
+  <li><strong>@PreDestroy / DisposableBean.destroy():</strong> Cleanup on context shutdown</li>
+</ol>
+<div class="tip-box"><div class="tip-label">AOP Proxy</div>Spring creates a CGLIB proxy in step 6 for @Transactional, @Async, etc. This is why self-invocation bypasses these annotations — you're calling the real object, not the proxy.</div>`
+      },
+      {
+        q: "What are Spring Boot Profiles and how do you use them?",
+        tags: ["spring"],
+        answer: `<p>Profiles let you define environment-specific config without code changes.</p>
+<div class="code-block"><span class="cm"># application-dev.properties</span>
+server.port=<span class="nm">8081</span>
+spring.datasource.url=jdbc:mysql://localhost/<span class="nm">devdb</span>
+
+<span class="cm"># application-prod.properties</span>
+server.port=<span class="nm">8080</span>
+spring.datasource.url=jdbc:mysql://prod-server/<span class="nm">proddb</span>
+
+<span class="cm"># Activate via property</span>
+spring.profiles.active=dev
+
+<span class="cm"># Or via JVM arg</span>
+java -jar app.jar --spring.profiles.active=prod</div>
+<p>Use <code>@Profile("dev")</code> on beans to activate them only in specific environments. <code>@Profile("!prod")</code> means "not in production".</p>`
+      },
+      {
+        q: "What is Spring Boot Actuator and what endpoints does it expose?",
+        tags: ["spring"],
+        answer: `<p>Actuator adds production-ready monitoring endpoints to your Spring Boot app.</p>
+<table class="complexity-table">
+  <tr><th>Endpoint</th><th>What it shows</th></tr>
+  <tr><td>/actuator/health</td><td>App health + DB, Redis, Kafka status</td></tr>
+  <tr><td>/actuator/metrics</td><td>JVM, HTTP, HikariCP, custom metrics</td></tr>
+  <tr><td>/actuator/threaddump</td><td>All thread states — debug deadlocks/blocked threads</td></tr>
+  <tr><td>/actuator/heapdump</td><td>Download heap dump for memory leak analysis</td></tr>
+  <tr><td>/actuator/env</td><td>All environment properties (sensitive — secure it!)</td></tr>
+  <tr><td>/actuator/loggers</td><td>View/change log levels at runtime — no restart</td></tr>
+</table>
+<div class="warn-box"><div class="warn-label">Security</div>Never expose all Actuator endpoints publicly. Use Spring Security to restrict to internal/admin access only.</div>`
+      },
+      {
+        q: "What is @Transactional and what are its common pitfalls?",
+        tags: ["spring","db"],
+        answer: `<p>Spring wraps the bean in a proxy. The proxy manages transaction start/commit/rollback around the method call.</p>
+<p><strong>Pitfall 1 — Self-invocation:</strong> <code>this.method()</code> bypasses proxy → no transaction</p>
+<p><strong>Pitfall 2 — Checked exceptions:</strong> Default rollback only on RuntimeException. Add <code>rollbackFor=Exception.class</code> for checked.</p>
+<p><strong>Pitfall 3 — Private methods:</strong> Proxy can't intercept — silently ignored</p>
+<p><strong>Pitfall 4 — External API inside transaction:</strong> Holds DB connection for the duration of the API call — pool exhaustion risk. Move external calls outside transaction.</p>
+<p><strong>Pitfall 5 — REQUIRES_NEW:</strong> Creates a new transaction — outer transaction commits even if inner fails unless you handle the exception.</p>`
+      },
+      {
+        q: "How to secure REST APIs using JWT in Spring Boot?",
+        tags: ["spring"],
+        answer: `<ol>
+  <li>Client POSTs credentials to <code>/auth/login</code></li>
+  <li>Server validates, returns signed JWT (header.payload.signature)</li>
+  <li>Client sends <code>Authorization: Bearer &lt;token&gt;</code> on every request</li>
+  <li>Custom <code>OncePerRequestFilter</code> intercepts, validates JWT signature + expiry</li>
+  <li>Sets <code>SecurityContextHolder</code> with Authentication — downstream code sees authenticated user</li>
+</ol>
+<div class="code-block">@Component
+<span class="kw">public class</span> <span class="nm">JwtFilter</span> <span class="kw">extends</span> OncePerRequestFilter {
+  <span class="kw">protected void</span> <span class="fn">doFilterInternal</span>(request, response, chain) {
+    String token = <span class="fn">extractToken</span>(request);
+    <span class="kw">if</span> (jwtUtil.<span class="fn">isValid</span>(token)) {
+      SecurityContextHolder.<span class="fn">getContext</span>()
+        .<span class="fn">setAuthentication</span>(<span class="fn">buildAuth</span>(token));
+    }
+    chain.<span class="fn">doFilter</span>(request, response);
+  }
+}</div>
+<div class="tip-box"><div class="tip-label">Token Invalidation</div>JWTs are stateless — can't be revoked without a blocklist. Use short expiry (15min access token) + longer-lived refresh token stored in Redis.</div>`
+      },
+      {
+        q: "What is the difference between application.properties and application.yml?",
+        tags: ["spring"],
+        answer: `<table class="complexity-table">
+  <tr><th></th><th>application.properties</th><th>application.yml</th></tr>
+  <tr><td>Format</td><td>Flat key=value</td><td>Hierarchical YAML</td></tr>
+  <tr><td>Readability</td><td>Simple for flat config</td><td>Better for nested config</td></tr>
+  <tr><td>Lists</td><td>key[0]=a, key[1]=b</td><td>Clean YAML list syntax</td></tr>
+  <tr><td>Multiple profiles</td><td>Separate files</td><td>Can use --- separator in one file</td></tr>
+</table>
+<p>Both are supported. If both exist, <code>application.properties</code> takes precedence over <code>application.yml</code>. Most teams pick one and stick with it.</p>`
+      },
+      {
+        q: "Explain Spring Data JPA vs Hibernate. Why use JPA over Hibernate directly?",
+        tags: ["spring","db"],
+        answer: `<p><strong>Hibernate</strong> is a JPA implementation — an ORM framework that maps Java objects to DB tables.</p>
+<p><strong>JPA</strong> is the specification (API/interface). Hibernate is one implementation of it.</p>
+<p><strong>Spring Data JPA</strong> builds on top of JPA — adds repository abstraction, query derivation, pagination.</p>
+<div class="code-block"><span class="cm">// Spring Data JPA — zero boilerplate</span>
+<span class="kw">interface</span> <span class="nm">UserRepository</span> <span class="kw">extends</span> JpaRepository&lt;User, Long&gt; {
+    List&lt;User&gt; <span class="fn">findByEmailAndStatus</span>(String email, String status);
+    <span class="cm">// Spring generates the query automatically</span>
+}</div>
+<div class="tip-box"><div class="tip-label">Why JPA over raw Hibernate</div>Programming to JPA interface means you can swap Hibernate for EclipseLink, etc. Spring Data JPA adds query derivation, pagination, and auditing on top — saves significant boilerplate.</div>`
+      },
+      {
+        q: "What is @Entity, @Repository, @Service, @Controller — and what's the real difference?",
+        tags: ["spring"],
+        answer: `<ul>
+  <li><strong>@Entity:</strong> JPA annotation. Marks a class as a DB table mapping. Has nothing to do with Spring bean lifecycle.</li>
+  <li><strong>@Repository:</strong> Spring stereotype. Marks a DAO class. Adds exception translation (SQL/JPA exceptions → Spring DataAccessException). Enables component scanning.</li>
+  <li><strong>@Service:</strong> Spring stereotype. Marks business logic layer. Purely semantic — no extra Spring behavior beyond component scanning.</li>
+  <li><strong>@Controller:</strong> Spring MVC. Marks request handling class. Returns view names. Combine with @ResponseBody to return data directly.</li>
+  <li><strong>@RestController:</strong> = @Controller + @ResponseBody. All methods return data (JSON) directly.</li>
+</ul>`
+      },
+      {
+        q: "What are Cascade operations in JPA?",
+        tags: ["spring","db"],
+        answer: `<p>Cascade defines what happens to child entities when you perform an operation on the parent.</p>
+<table class="complexity-table">
+  <tr><th>CascadeType</th><th>Effect</th></tr>
+  <tr><td>PERSIST</td><td>Saving parent also saves children</td></tr>
+  <tr><td>MERGE</td><td>Merging parent also merges children</td></tr>
+  <tr><td>REMOVE</td><td>Deleting parent also deletes children</td></tr>
+  <tr><td>REFRESH</td><td>Refreshing parent also refreshes children</td></tr>
+  <tr><td>DETACH</td><td>Detaching parent also detaches children</td></tr>
+  <tr><td>ALL</td><td>All of the above</td></tr>
+</table>
+<div class="warn-box"><div class="warn-label">Be careful with REMOVE + ALL</div>CascadeType.REMOVE on a @ManyToMany can delete shared entities. Use CascadeType.ALL only on @OneToOne and @OneToMany where parent truly owns children.</div>`
+      }
+    ]
+  },
+  {
+    id: "dsa-top20",
+    title: "DSA Top 20 — Must Prepare",
+    icon: "🎯",
+    color: "#eab308",
+    cat: "DSA",
+    questions: [
+      {
+        q: "Valid Parentheses — stack-based solution",
+        tags: ["dsa"],
+        answer: `<div class="code-block">Map&lt;Character, Character&gt; map = Map.of(<span class="str">')'</span>,<span class="str">'('</span>, <span class="str">'}'</span>,<span class="str">'{'</span>, <span class="str">']'</span>,<span class="str">'['</span>);
+Deque&lt;Character&gt; stack = <span class="kw">new</span> ArrayDeque&lt;&gt;();
+<span class="kw">for</span> (<span class="kw">char</span> c : s.<span class="fn">toCharArray</span>()) {
+    <span class="kw">if</span> (!map.<span class="fn">containsKey</span>(c)) { stack.<span class="fn">push</span>(c); <span class="kw">continue</span>; }
+    <span class="kw">if</span> (stack.<span class="fn">isEmpty</span>() || stack.<span class="fn">pop</span>() != map.<span class="fn">get</span>(c)) <span class="kw">return false</span>;
+}
+<span class="kw">return</span> stack.<span class="fn">isEmpty</span>();</div>
+<p>O(n) time, O(n) space. Stack holds unmatched opening brackets.</p>`
+      },
+      {
+        q: "Maximum Subarray — Kadane's Algorithm",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="kw">int</span> maxSum = nums[<span class="nm">0</span>], curr = nums[<span class="nm">0</span>];
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="nm">1</span>; i &lt; nums.length; i++) {
+    curr = Math.<span class="fn">max</span>(nums[i], curr + nums[i]);
+    maxSum = Math.<span class="fn">max</span>(maxSum, curr);
+}
+<span class="kw">return</span> maxSum;</div>
+<p>Key insight: at each element, decide whether to extend current subarray or start fresh. O(n) time, O(1) space.</p>`
+      },
+      {
+        q: "Longest Substring Without Repeating Characters — sliding window",
+        tags: ["dsa"],
+        answer: `<div class="code-block">Map&lt;Character, Integer&gt; map = <span class="kw">new</span> HashMap&lt;&gt;();
+<span class="kw">int</span> max = <span class="nm">0</span>, left = <span class="nm">0</span>;
+<span class="kw">for</span> (<span class="kw">int</span> right = <span class="nm">0</span>; right &lt; s.<span class="fn">length</span>(); right++) {
+    <span class="kw">char</span> c = s.<span class="fn">charAt</span>(right);
+    <span class="kw">if</span> (map.<span class="fn">containsKey</span>(c))
+        left = Math.<span class="fn">max</span>(left, map.<span class="fn">get</span>(c) + <span class="nm">1</span>);
+    map.<span class="fn">put</span>(c, right);
+    max = Math.<span class="fn">max</span>(max, right - left + <span class="nm">1</span>);
+}
+<span class="kw">return</span> max;</div>
+<p>Sliding window + HashMap. O(n) time.</p>`
+      },
+      {
+        q: "Merge Intervals",
+        tags: ["dsa"],
+        answer: `<div class="code-block">Arrays.<span class="fn">sort</span>(intervals, (a, b) -> a[<span class="nm">0</span>] - b[<span class="nm">0</span>]);
+List&lt;<span class="kw">int</span>[]&gt; res = <span class="kw">new</span> ArrayList&lt;&gt;();
+<span class="kw">int</span>[] cur = intervals[<span class="nm">0</span>];
+<span class="kw">for</span> (<span class="kw">int</span>[] iv : intervals) {
+    <span class="kw">if</span> (iv[<span class="nm">0</span>] &lt;= cur[<span class="nm">1</span>]) cur[<span class="nm">1</span>] = Math.<span class="fn">max</span>(cur[<span class="nm">1</span>], iv[<span class="nm">1</span>]);
+    <span class="kw">else</span> { res.<span class="fn">add</span>(cur); cur = iv; }
+}
+res.<span class="fn">add</span>(cur);
+<span class="kw">return</span> res.<span class="fn">toArray</span>(<span class="kw">new int</span>[<span class="nm">0</span>][]);</div>
+<p>Sort by start time. Merge if current start ≤ prev end. O(n log n).</p>`
+      },
+      {
+        q: "Top K Frequent Elements",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="cm">// Bucket sort approach — O(n)</span>
+Map&lt;Integer, Integer&gt; freq = <span class="kw">new</span> HashMap&lt;&gt;();
+<span class="kw">for</span> (<span class="kw">int</span> n : nums) freq.<span class="fn">merge</span>(n, <span class="nm">1</span>, Integer::sum);
+
+List&lt;Integer&gt;[] buckets = <span class="kw">new</span> List[nums.length + <span class="nm">1</span>];
+freq.<span class="fn">forEach</span>((num, cnt) -> {
+    <span class="kw">if</span> (buckets[cnt] == <span class="kw">null</span>) buckets[cnt] = <span class="kw">new</span> ArrayList&lt;&gt;();
+    buckets[cnt].<span class="fn">add</span>(num);
+});
+List&lt;Integer&gt; res = <span class="kw">new</span> ArrayList&lt;&gt;();
+<span class="kw">for</span> (<span class="kw">int</span> i = buckets.length-<span class="nm">1</span>; i >= <span class="nm">0</span> && res.<span class="fn">size</span>() &lt; k; i--)
+    <span class="kw">if</span> (buckets[i] != <span class="kw">null</span>) res.<span class="fn">addAll</span>(buckets[i]);</div>`
+      },
+      {
+        q: "Number of Islands — BFS/DFS grid traversal",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="kw">int</span> count = <span class="nm">0</span>;
+<span class="kw">for</span> (<span class="kw">int</span> i=<span class="nm">0</span>; i&lt;grid.length; i++)
+  <span class="kw">for</span> (<span class="kw">int</span> j=<span class="nm">0</span>; j&lt;grid[<span class="nm">0</span>].length; j++)
+    <span class="kw">if</span> (grid[i][j]==<span class="str">'1'</span>) { <span class="fn">dfs</span>(grid,i,j); count++; }
+
+<span class="kw">void</span> <span class="fn">dfs</span>(<span class="kw">char</span>[][] g, <span class="kw">int</span> i, <span class="kw">int</span> j) {
+  <span class="kw">if</span> (i&lt;<span class="nm">0</span>||i>=g.length||j&lt;<span class="nm">0</span>||j>=g[<span class="nm">0</span>].length||g[i][j]!=<span class="str">'1'</span>) <span class="kw">return</span>;
+  g[i][j] = <span class="str">'0'</span>; <span class="cm">// mark visited</span>
+  <span class="fn">dfs</span>(g,i+<span class="nm">1</span>,j); <span class="fn">dfs</span>(g,i-<span class="nm">1</span>,j); <span class="fn">dfs</span>(g,i,j+<span class="nm">1</span>); <span class="fn">dfs</span>(g,i,j-<span class="nm">1</span>);
+}</div>
+<p>O(m×n) time. Mark visited by changing '1' to '0' in-place.</p>`
+      },
+      {
+        q: "Coin Change — Dynamic Programming (minimum coins)",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="kw">int</span>[] dp = <span class="kw">new int</span>[amount + <span class="nm">1</span>];
+Arrays.<span class="fn">fill</span>(dp, amount + <span class="nm">1</span>); <span class="cm">// infinity</span>
+dp[<span class="nm">0</span>] = <span class="nm">0</span>;
+<span class="kw">for</span> (<span class="kw">int</span> coin : coins)
+    <span class="kw">for</span> (<span class="kw">int</span> i = coin; i &lt;= amount; i++)
+        dp[i] = Math.<span class="fn">min</span>(dp[i], dp[i - coin] + <span class="nm">1</span>);
+<span class="kw">return</span> dp[amount] > amount ? -<span class="nm">1</span> : dp[amount];</div>
+<p>Bottom-up DP. O(amount × coins) time. Classic unbounded knapsack pattern.</p>`
+      },
+      {
+        q: "Longest Increasing Subsequence — O(n log n) patience sorting",
+        tags: ["dsa"],
+        answer: `<div class="code-block"><span class="cm">// O(n log n) using binary search</span>
+List&lt;Integer&gt; tails = <span class="kw">new</span> ArrayList&lt;&gt;();
+<span class="kw">for</span> (<span class="kw">int</span> num : nums) {
+    <span class="kw">int</span> lo=<span class="nm">0</span>, hi=tails.<span class="fn">size</span>();
+    <span class="kw">while</span> (lo &lt; hi) {
+        <span class="kw">int</span> mid=(lo+hi)/<span class="nm">2</span>;
+        <span class="kw">if</span> (tails.<span class="fn">get</span>(mid) &lt; num) lo=mid+<span class="nm">1</span>; <span class="kw">else</span> hi=mid;
+    }
+    <span class="kw">if</span> (lo == tails.<span class="fn">size</span>()) tails.<span class="fn">add</span>(num);
+    <span class="kw">else</span> tails.<span class="fn">set</span>(lo, num);
+}
+<span class="kw">return</span> tails.<span class="fn">size</span>();</div>
+<p>O(n²) DP is easier to explain; O(n log n) is the optimal answer interviewers want to see.</p>`
+      },
+      {
+        q: "Detect Cycle in Linked List — Floyd's algorithm",
+        tags: ["dsa"],
+        answer: `<div class="code-block">ListNode slow = head, fast = head;
+<span class="kw">while</span> (fast != <span class="kw">null</span> && fast.next != <span class="kw">null</span>) {
+    slow = slow.next;
+    fast = fast.next.next;
+    <span class="kw">if</span> (slow == fast) <span class="kw">return true</span>;
+}
+<span class="kw">return false</span>;</div>
+<p>O(n) time, O(1) space. Slow moves 1 step, fast moves 2 steps. If cycle exists, they meet. To find cycle start: reset slow to head, move both 1 step at a time — they meet at cycle entry.</p>`
+      },
+      {
+        q: "Binary Tree Level Order Traversal — BFS with Queue",
+        tags: ["dsa"],
+        answer: `<div class="code-block">List&lt;List&lt;Integer&gt;&gt; res = <span class="kw">new</span> ArrayList&lt;&gt;();
+<span class="kw">if</span> (root == <span class="kw">null</span>) <span class="kw">return</span> res;
+Queue&lt;TreeNode&gt; q = <span class="kw">new</span> LinkedList&lt;&gt;();
+q.<span class="fn">offer</span>(root);
+<span class="kw">while</span> (!q.<span class="fn">isEmpty</span>()) {
+    <span class="kw">int</span> size = q.<span class="fn">size</span>();
+    List&lt;Integer&gt; level = <span class="kw">new</span> ArrayList&lt;&gt;();
+    <span class="kw">for</span> (<span class="kw">int</span> i=<span class="nm">0</span>; i&lt;size; i++) {
+        TreeNode node = q.<span class="fn">poll</span>();
+        level.<span class="fn">add</span>(node.val);
+        <span class="kw">if</span> (node.left != <span class="kw">null</span>) q.<span class="fn">offer</span>(node.left);
+        <span class="kw">if</span> (node.right != <span class="kw">null</span>) q.<span class="fn">offer</span>(node.right);
+    }
+    res.<span class="fn">add</span>(level);
+}
+<span class="kw">return</span> res;</div>`
       }
     ]
   }
